@@ -130,18 +130,27 @@ def bidirectional_rnn_model(input_dim, units, output_dim=29):
     print(model.summary())
     return model
 
-def final_model():
+def final_model(input_dim=13, output_dim=29):
     """ Build a deep network for speech 
     """
+    kernel_size=11
+    stride=2
+    padding='same'
     # Main acoustic input
     input_data = Input(name='the_input', shape=(None, input_dim))
     # TODO: Specify the layers in your network
-    ...
+    conv = Conv1D(200, kernel_size, strides=stride, padding=padding, activation='relu')(input_data)
+    bn_cnn = BatchNormalization(name='bn_conv_1d')(conv)
+    bidir_1 = Bidirectional(LSTM(100, return_sequences=True, implementation=2), merge_mode='concat')(bn_cnn)
+    bn_bidir_1 = BatchNormalization()(bidir_1)
+    bidir_2 = Bidirectional(LSTM(output_dim, return_sequences=True, implementation=2, dropout_W=0.1, dropout_U=0.1), merge_mode='concat')(bn_bidir_1)
+    bn_bidir_2 = BatchNormalization()(bidir_2)
+    time_dense = TimeDistributed(Dense(output_dim))(bn_bidir_2)
     # TODO: Add softmax activation layer
-    y_pred = ...
+    y_pred = Activation('softmax', name='softmax')(time_dense)
     # Specify the model
     model = Model(inputs=input_data, outputs=y_pred)
     # TODO: Specify model.output_length
-    model.output_length = ...
+    model.output_length = lambda x: cnn_output_length(x, kernel_size, padding, stride)
     print(model.summary())
     return model
